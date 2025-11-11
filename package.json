@@ -1,0 +1,18 @@
+{
+  "name": "maindeepakproj",
+  "version": "1.0.0",
+  "description": "RealCoachDeepak main project with Mollie and Razorpay integration",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev",
+    "build": "echo 'Static build not required for HTML + API setup'"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "engines": {
+    "node": "22.x"
+  },
+  "license": "MIT"
+}
