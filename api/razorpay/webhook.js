@@ -12,6 +12,7 @@ export default async function handler(req, res) {
     const subscription = body.payload?.subscription?.entity;
 
     console.log(`📬 Received Razorpay Event: ${event}`);
+    console.log("🔍 Full Razorpay Body:", JSON.stringify(body, null, 2));
 
     // 🗂️ Map internal Razorpay plan IDs to user-friendly names
     const PLAN_NAME_MAP = {
@@ -29,7 +30,7 @@ export default async function handler(req, res) {
   "pl_RfCnu3mYnC3FrA": "Deepak Infield Domination Monthly",
   "pl_RcOmJ9ipDaPrjg": "Hindi Pro Community 699",
   "pl_RxExample001": "Dating Mastery Premium",
-  // add more as needed
+  // add more as needed     pl_RcOmJ9ipDaPrjg
 };
 
     // Escape MarkdownV2 special characters (Telegram)
