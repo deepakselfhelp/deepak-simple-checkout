@@ -151,6 +151,22 @@ support@realcoachdeepak.com
 `);
       await sendTelegramMessage(message);
       console.log(`🔁 [Renewal] ${subId}`);
+
+      // 💌 Email via Brevo
+      const emailBody = `
+Hello,
+
+Your subscription for ${planName} has been renewed successfully.
+
+Subscription ID: ${subId}
+
+Thank you for staying with us.
+
+Warm regards,  
+Deepak Team  
+support@realcoachdeepak.com
+`;
+      await sendBrevoEmail(email, "Subscription Renewal – RealCoachDeepak", emailBody);
     }
 
     // ⚠️ 3️⃣ Payment Failed
@@ -172,6 +188,22 @@ support@realcoachdeepak.com
 `);
       await sendTelegramMessage(message);
       console.log(`⚠️ [Payment Failed] ${payment.id}`);
+
+      // 💌 Email via Brevo
+      const emailBody = `
+Hello,
+
+Your payment of ${currency} ${amount} could not be processed.
+
+Reason: ${failReason}
+
+Please try again or contact us for assistance.
+
+Warm regards,  
+Deepak Team  
+support@realcoachdeepak.com
+`;
+      await sendBrevoEmail(email, "Payment Failed – RealCoachDeepak", emailBody);
     }
 
     // 🚫 4️⃣ Subscription Cancelled / Rebill Failed
@@ -181,9 +213,12 @@ support@realcoachdeepak.com
         subscription.plan_id ||
         "Razorpay Plan";
       const subId = subscription.id;
-      const reason = subscription.cancel_reason || "Cancelled manually or after failed rebills";
+      const reason =
+        subscription.cancel_reason ||
+        "Cancelled manually or after failed rebills";
       const failedRebill =
-        reason.includes("multiple failed rebill") || reason.includes("failed payment");
+        reason.includes("multiple failed rebill") ||
+        reason.includes("failed payment");
       const email = extractEmail(subscription);
       const phone = extractPhone(subscription);
 
@@ -198,6 +233,22 @@ ${failedRebill ? "🚨 *Subscription Failed After Multiple Rebill Attempts!*" : 
 `);
       await sendTelegramMessage(message);
       console.log(`🚫 [Cancelled] ${subId}`);
+
+      // 💌 Email via Brevo
+      const emailBody = `
+Hello,
+
+Your subscription (${planName}) has been cancelled.
+
+Reason: ${reason}
+
+If this was not intended, you can resubscribe anytime at realcoachdeepak.com.
+
+Best regards,  
+Deepak Team  
+support@realcoachdeepak.com
+`;
+      await sendBrevoEmail(email, "Subscription Cancelled – RealCoachDeepak", emailBody);
     }
 
     res.status(200).json({ status: "ok" });
