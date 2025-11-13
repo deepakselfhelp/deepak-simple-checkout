@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     const subscription = body.payload?.subscription?.entity;
 
     console.log(`📬 Received Razorpay Event: ${event}`);
-    console.log("🔍 Full Razorpay Body:", JSON.stringify(body, null, 2));
+   // console.log("🔍 Full Razorpay Body:", JSON.stringify(body, null, 2));
 
     // 🗂️ Map internal Razorpay plan IDs to user-friendly names
     const PLAN_NAME_MAP = {
@@ -151,7 +151,7 @@ support@realcoachdeepak.com
 `;
       await sendBrevoEmail(email, `Payment Confirmation – ${readablePlanName}`, emailBody);
       console.log(`✅ [Payment Captured] ${payment.id}`);
-      console.log("🧾 Payment Notes:", JSON.stringify(payment.notes, null, 2));
+     // console.log("🧾 Payment Notes:", JSON.stringify(payment.notes, null, 2));
     }
 
     // 🌟 NEW — Subscription Activated
