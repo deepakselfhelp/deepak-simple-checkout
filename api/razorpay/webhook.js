@@ -12,6 +12,13 @@ export default async function handler(req, res) {
     const subscription = body.payload?.subscription?.entity;
 
     console.log(`📬 Received Razorpay Event: ${event}`);
+    // 🗂️ Map internal Razorpay plan IDs to user-friendly names
+const PLAN_NAME_MAP = {
+  "plan_RcO3xG88LCkMNo": "Hindi Pro Community 699",
+  "plan_RfBy2sLVRdY2VN": "Deepak Academy Monthly",
+  "plan_Example123": "Dating Mastery Premium",
+  // add more as needed
+};
 
     // Escape MarkdownV2 special characters (Telegram)
     function escapeMarkdownV2(text) {
@@ -86,170 +93,195 @@ return text.replace(/([_*\[\]()~`>#+\\=\-|{}.!\\])/g, "\\$1");
       );
     }
 
-    // 💰 1️⃣ Payment Captured
-    if (event === "payment.captured" && payment) {
-      const amount = (payment.amount / 100).toFixed(2);
-      const currency = payment.currency || "INR";
-      const email = extractEmail(payment);
-      const name = payment.notes?.name || "Customer";
-      const product =
-        payment.notes?.product ||
-        payment.notes?.plan_name ||
-        payment.notes?.subscription_name ||
-        "Subscription (via Razorpay Button)";
+   // 💰 1️⃣ Payment Captured
+if (event === "payment.captured" && payment) {
+  const amount = (payment.amount / 100).toFixed(2);
+  const currency = payment.currency || "INR";
+  const email = extractEmail(payment);
+  const name = payment.notes?.name || "Customer";
+  const planId =
+    payment.notes?.plan_id ||
+    payment.notes?.plan_name ||
+    payment.notes?.subscription_name ||
+    null;
 
-      // Telegram
-      const tgMessage = escapeMarkdownV2(`
+  // ✅ Use readable plan name if exists
+  const readablePlanName = PLAN_NAME_MAP[planId] || payment.notes?.product || "Subscription (via Razorpay Button)";
+
+  // 🟡 Telegram message
+  const tgMessage = escapeMarkdownV2(`
 🏦 *Source:* Razorpay
 💰 *New Payment Captured*
-📦 *Product:* ${product}
+📦 *Product:* ${readablePlanName}
 📧 *Email:* ${email}
 💵 *Amount:* ${currency} ${amount}
 🆔 *Payment ID:* ${payment.id}
 `);
-      await sendTelegramMessage(tgMessage);
+  await sendTelegramMessage(tgMessage);
 
-      // Brevo Email
-      const emailBody = `
-Hello ${name},
+  // 💌 Brevo email body
+  const emailBody = `
+🏦 Source: Razorpay
+💰 New Payment Captured
+📦 Product: ${readablePlanName}
+📧 Email: ${email}
+💵 Amount: ${currency} ${amount}
+🆔 Payment ID: ${payment.id}
 
-Your payment for ${product} has been successfully received.
-
-Amount: ${currency} ${amount}
-Payment ID: ${payment.id}
-
-If you purchased a subscription, you’ll receive access details shortly.
-If you didn’t authorize this payment, please contact us immediately.
-
-Warm regards,
-Deepak Team  
-support@realcoachdeepak.com
-`;
-      await sendBrevoEmail(email, "Payment Confirmation – RealCoachDeepak", emailBody);
-      console.log(`✅ [Payment Captured] ${payment.id}`);
-    }
-
-    // 🔁 2️⃣ Subscription Renewal Charged
-    if (event === "subscription.charged" && subscription) {
-      const planName =
-        subscription.notes?.product ||
-        subscription.plan_id ||
-        "Razorpay Subscription Plan";
-      const subId = subscription.id;
-      const totalCount = subscription.total_count || "∞";
-      const email = extractEmail(subscription);
-      const phone = extractPhone(subscription);
-
-      const message = escapeMarkdownV2(`
-🏦 *Source:* Razorpay
-🔁 *Subscription Renewal Charged*
-📦 *Product:* ${planName}
-📧 *Email:* ${email}
-📱 *Phone:* ${phone}
-🧾 *Subscription ID:* ${subId}
-💳 *Cycle Count:* ${totalCount}
-`);
-      await sendTelegramMessage(message);
-      console.log(`🔁 [Renewal] ${subId}`);
-
-      // 💌 Email via Brevo
-      const emailBody = `
-Hello,
-
-Your subscription for ${planName} has been renewed successfully.
-
-Subscription ID: ${subId}
-
-Thank you for staying with us.
+If you purchased a subscription, you'll receive access details shortly.
+If you didn't authorize this payment, please contact us immediately.
 
 Warm regards,  
 Deepak Team  
 support@realcoachdeepak.com
 `;
-      await sendBrevoEmail(email, "Subscription Renewal – RealCoachDeepak", emailBody);
-    }
+  await sendBrevoEmail(email, \`Payment Confirmation – \${readablePlanName}\`, emailBody);
+  console.log(\`✅ [Payment Captured] \${payment.id}\`);
+}
 
-    // ⚠️ 3️⃣ Payment Failed
-    if (event === "payment.failed" && payment) {
-      const amount = (payment.amount / 100).toFixed(2);
-      const currency = payment.currency || "INR";
-      const failReason = payment.error_description || "Unknown reason";
-      const email = extractEmail(payment);
-      const phone = extractPhone(payment);
+    // 🔁 2️⃣ Subscription Renewal Charged
+if (event === "subscription.charged" && subscription) {
+  // ✅ Use human-readable plan names
+  const planId = subscription.plan_id;
+  const readablePlanName = PLAN_NAME_MAP[planId] || planId;
 
-      const message = escapeMarkdownV2(`
+  const subId = subscription.id;
+  const totalCount = subscription.total_count || "∞";
+  const email = extractEmail(subscription);
+  const phone = extractPhone(subscription);
+
+  const message = escapeMarkdownV2(`
+🏦 *Source:* Razorpay
+🔁 *Subscription Renewal Charged*
+📦 *Product:* ${readablePlanName}
+📧 *Email:* ${email}
+📱 *Phone:* ${phone}
+🧾 *Subscription ID:* ${subId}
+💳 *Cycle Count:* ${totalCount}
+`);
+  await sendTelegramMessage(message);
+  console.log(`🔁 [Renewal] ${subId}`);
+
+  // 💌 Email via Brevo
+  const emailBody = `
+🏦 Source: Razorpay
+🔁 Subscription Renewal Charged
+📦 Product: ${readablePlanName}
+📧 Email: ${email}
+📱 Phone: ${phone}
+🧾 Subscription ID: ${subId}
+💳 Cycle Count: ${totalCount}
+
+Thank you for staying with us!
+
+Warm regards,  
+Deepak Team  
+support@realcoachdeepak.com
+`;
+  await sendBrevoEmail(email, \`Subscription Renewal – \${readablePlanName}\`, emailBody);
+}
+
+  // ⚠️ 3️⃣ Payment Failed
+if (event === "payment.failed" && payment) {
+  const amount = (payment.amount / 100).toFixed(2);
+  const currency = payment.currency || "INR";
+  const failReason = payment.error_description || "Unknown reason";
+  const email = extractEmail(payment);
+  const phone = extractPhone(payment);
+
+  // ✅ Get plan name if available
+  const planId =
+    payment.notes?.plan_id ||
+    payment.notes?.plan_name ||
+    payment.notes?.subscription_name ||
+    null;
+  const readablePlanName =
+    PLAN_NAME_MAP[planId] ||
+    payment.notes?.product ||
+    "Razorpay Payment";
+
+  // 🟡 Telegram message
+  const tgMessage = escapeMarkdownV2(`
 🏦 *Source:* Razorpay
 ⚠️ *Payment Failed*
+📦 *Product:* ${readablePlanName}
 📧 *Email:* ${email}
 📱 *Phone:* ${phone}
 💵 *Amount:* ${currency} ${amount}
 ❌ *Reason:* ${failReason}
 🆔 *Payment ID:* ${payment.id}
 `);
-      await sendTelegramMessage(message);
-      console.log(`⚠️ [Payment Failed] ${payment.id}`);
+  await sendTelegramMessage(tgMessage);
+  console.log(`⚠️ [Payment Failed] ${payment.id}`);
 
-      // 💌 Email via Brevo
-      const emailBody = `
-Hello,
+  // 💌 Brevo Email
+  const emailBody = `
+🏦 Source: Razorpay
+⚠️ Payment Failed
+📦 Product: ${readablePlanName}
+📧 Email: ${email}
+📱 Phone: ${phone}
+💵 Amount: ${currency} ${amount}
+❌ Reason: ${failReason}
+🆔 Payment ID: ${payment.id}
 
-Your payment of ${currency} ${amount} could not be processed.
-
-Reason: ${failReason}
-
-Please try again or contact us for assistance.
+Please try again or contact us for help if you believe this is an error.
 
 Warm regards,  
 Deepak Team  
 support@realcoachdeepak.com
 `;
-      await sendBrevoEmail(email, "Payment Failed – RealCoachDeepak", emailBody);
-    }
+  await sendBrevoEmail(email, \`Payment Failed – \${readablePlanName}\`, emailBody);
+}
+  // 🚫 4️⃣ Subscription Cancelled / Rebill Failed
+if (event === "subscription.cancelled" && subscription) {
+  const planId = subscription.plan_id;
+  const readablePlanName =
+    PLAN_NAME_MAP[planId] ||
+    subscription.notes?.product ||
+    "Razorpay Plan";
 
-    // 🚫 4️⃣ Subscription Cancelled / Rebill Failed
-    if (event === "subscription.cancelled" && subscription) {
-      const planName =
-        subscription.notes?.product ||
-        subscription.plan_id ||
-        "Razorpay Plan";
-      const subId = subscription.id;
-      const reason =
-        subscription.cancel_reason ||
-        "Cancelled manually or after failed rebills";
-      const failedRebill =
-        reason.includes("multiple failed rebill") ||
-        reason.includes("failed payment");
-      const email = extractEmail(subscription);
-      const phone = extractPhone(subscription);
+  const subId = subscription.id;
+  const reason =
+    subscription.cancel_reason ||
+    "Cancelled manually or after failed rebills";
+  const failedRebill =
+    reason.includes("multiple failed rebill") ||
+    reason.includes("failed payment");
+  const email = extractEmail(subscription);
+  const phone = extractPhone(subscription);
 
-      const message = escapeMarkdownV2(`
+  // 🟡 Telegram Message
+  const message = escapeMarkdownV2(`
 🏦 *Source:* Razorpay
 ${failedRebill ? "🚨 *Subscription Failed After Multiple Rebill Attempts!*" : "🚫 *Subscription Cancelled*"}
-📦 *Product:* ${planName}
+📦 *Product:* ${readablePlanName}
 📧 *Email:* ${email}
 📱 *Phone:* ${phone}
 🧾 *Subscription ID:* ${subId}
 ❌ *Reason:* ${reason}
 `);
-      await sendTelegramMessage(message);
-      console.log(`🚫 [Cancelled] ${subId}`);
+  await sendTelegramMessage(message);
+  console.log(`🚫 [Cancelled] ${subId}`);
 
-      // 💌 Email via Brevo
-      const emailBody = `
-Hello,
+  // 💌 Brevo Email — detailed plain text version
+  const emailBody = `
+🏦 Source: Razorpay
+${failedRebill ? "🚨 Subscription Failed After Multiple Rebill Attempts!" : "🚫 Subscription Cancelled"}
+📦 Product: ${readablePlanName}
+📧 Email: ${email}
+📱 Phone: ${phone}
+🧾 Subscription ID: ${subId}
+❌ Reason: ${reason}
 
-Your subscription (${planName}) has been cancelled.
-
-Reason: ${reason}
-
-If this was not intended, you can resubscribe anytime at realcoachdeepak.com.
+If this was not intended, you can resubscribe anytime at https://realcoachdeepak.com.
 
 Best regards,  
 Deepak Team  
 support@realcoachdeepak.com
 `;
-      await sendBrevoEmail(email, "Subscription Cancelled – RealCoachDeepak", emailBody);
-    }
+  await sendBrevoEmail(email, \`Subscription Cancelled – \${readablePlanName}\`, emailBody);
+}
 
     res.status(200).json({ status: "ok" });
   } catch (err) {
