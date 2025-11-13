@@ -126,17 +126,19 @@ Admin copy for record — Sent to: ${to}
 
 // 💰 1️⃣ Initial Payment Success
 if (status === "paid" && sequence === "first") {
-	  // 🧠 Prevent duplicate processing
-  if (!processedPayments.has(payment.id)) {
-   
-  processedPayments.add(payment.id);
-	
-	
+  // 🧠 Avoid running twice for the same transaction
+  if (processedPayments.has(`initial-${payment.id}`)) {
+    console.log(`⚠️ Duplicate Mollie initial payment ignored for ${payment.id}`);
+    return res.status(200).send("Duplicate ignored");
+  }
+  processedPayments.add(`initial-${payment.id}`);
+
+  // 🔔 Telegram Notification
   await sendTelegram(
     `💰 *INITIAL PAYMENT SUCCESSFUL*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n🏦 *Source:* Mollie\n📧 *Email:* ${email}\n👤 *Name:* ${name}\n📦 *Plan:* ${planType}\n💵 *Initial:* ${currency} ${amount}\n🔁 *Recurring:* ${currency} ${recurringAmount}\n🆔 *Payment ID:* ${payment.id}\n🧾 *Customer ID:* ${customerId}${isRecurring ? "\n⏳ Waiting 8 seconds before creating subscription…" : "\n✅ One-time purchase — no subscription."}`
   );
 
-  // 💌 Brevo Email (Customer + Admin Copy)
+  // 💌 Brevo Email for Payment Confirmation
   const emailBody = `
 🏦 Source: Mollie
 💰 INITIAL PAYMENT SUCCESSFUL
@@ -145,27 +147,25 @@ if (status === "paid" && sequence === "first") {
 📦 Plan: ${planType}
 💵 Initial: ${currency} ${amount}
 🔁 Recurring: ${currency} ${recurringAmount}
-🧾 Customer ID: ${customerId}
 🆔 Payment ID: ${payment.id}
+🧾 Customer ID: ${customerId}
 🕒 Time: ${timeCET} (CET)
 
-If you purchased a subscription, your next payment will be charged automatically.
-If this wasn’t you, please contact support immediately.
+Your payment has been received successfully.
+${isRecurring ? "Your subscription will be created shortly." : "This was a one-time payment."}
 
 Warm regards,
 Deepak Team
 support@realcoachdeepak.com
 `;
   await sendBrevoEmail(email, `Payment Confirmation – ${planType}`, emailBody);
-  } else {
-  console.log(`⚠️ Duplicate Mollie payment ignored for ${payment.id}`);
-  return res.status(200).send("Duplicate ignored");
-}
 
+  // 🕗 Delay for subscription creation
   if (!isRecurring) return res.status(200).send("OK");
 
   await new Promise(r => setTimeout(r, 8000));
 
+  // 🧾 Create subscription after initial payment
   const subRes = await fetch(
     `https://api.mollie.com/v2/customers/${customerId}/subscriptions`,
     {
@@ -185,18 +185,17 @@ support@realcoachdeepak.com
 
   const subscription = await subRes.json();
   if (subscription.id) {
-	    // 🧠 Prevent duplicate subscription notifications
-  if (processedPayments.has(subscription.id)) {
-    console.log(`⚠️ Duplicate Mollie subscription start ignored for ${subscription.id}`);
-    return res.status(200).send("Duplicate ignored");
-  }
-  processedPayments.add(subscription.id);
-	  
+    // ⚙️ Prevent duplicate subscription messages
+    if (processedPayments.has(`sub-${subscription.id}`)) {
+      console.log(`⚠️ Duplicate Mollie subscription start ignored for ${subscription.id}`);
+      return res.status(200).send("Duplicate ignored");
+    }
+    processedPayments.add(`sub-${subscription.id}`);
+
     await sendTelegram(
       `🧾 *SUBSCRIPTION STARTED*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n🏦 *Source:* Mollie\n📧 *Email:* ${email}\n👤 *Name:* ${name}\n📦 *Plan:* ${planType}\n💳 *Recurring:* ${currency} ${recurringAmount}\n🧾 *Subscription ID:* ${subscription.id}\n🆔 *Customer ID:* ${customerId}`
     );
 
-    // 💌 Brevo Email for Subscription Start
     const subEmailBody = `
 🏦 Source: Mollie
 🧾 SUBSCRIPTION STARTED
