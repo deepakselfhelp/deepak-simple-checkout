@@ -126,6 +126,14 @@ Admin copy for record — Sent to: ${to}
 
 // 💰 1️⃣ Initial Payment Success
 if (status === "paid" && sequence === "first") {
+	  // 🧠 Prevent duplicate processing
+  if (processedPayments.has(payment.id)) {
+    console.log(`⚠️ Duplicate Mollie initial payment ignored for ${payment.id}`);
+    return res.status(200).send("Duplicate ignored");
+  }
+  processedPayments.add(payment.id);
+	
+	
   await sendTelegram(
     `💰 *INITIAL PAYMENT SUCCESSFUL*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n🏦 *Source:* Mollie\n📧 *Email:* ${email}\n👤 *Name:* ${name}\n📦 *Plan:* ${planType}\n💵 *Initial:* ${currency} ${amount}\n🔁 *Recurring:* ${currency} ${recurringAmount}\n🆔 *Payment ID:* ${payment.id}\n🧾 *Customer ID:* ${customerId}${isRecurring ? "\n⏳ Waiting 8 seconds before creating subscription…" : "\n✅ One-time purchase — no subscription."}`
   );
@@ -175,6 +183,13 @@ support@realcoachdeepak.com
 
   const subscription = await subRes.json();
   if (subscription.id) {
+	    // 🧠 Prevent duplicate subscription notifications
+  if (processedPayments.has(subscription.id)) {
+    console.log(`⚠️ Duplicate Mollie subscription start ignored for ${subscription.id}`);
+    return res.status(200).send("Duplicate ignored");
+  }
+  processedPayments.add(subscription.id);
+	  
     await sendTelegram(
       `🧾 *SUBSCRIPTION STARTED*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n🏦 *Source:* Mollie\n📧 *Email:* ${email}\n👤 *Name:* ${name}\n📦 *Plan:* ${planType}\n💳 *Recurring:* ${currency} ${recurringAmount}\n🧾 *Subscription ID:* ${subscription.id}\n🆔 *Customer ID:* ${customerId}`
     );
