@@ -112,21 +112,26 @@ if (event === "payment.captured" && payment) {
   const currency = payment.currency || "INR";
   const email = extractEmail(payment);
   const name = payment.notes?.name || "Customer";
+
+  // Try multiple locations for product/plan name
   const planId =
     payment.notes?.plan_id ||
     payment.notes?.plan_name ||
     payment.notes?.subscription_name ||
+    payment.subscription_id || // ⬅️ sometimes plan links via subscription_id
     null;
-  const buttonId = payment.notes?.button_id || payment.method || null;
 
-  // ✅ Use readable plan or button name if exists
-  const readablePlanName =
-    PLAN_NAME_MAP[planId] ||
-    BUTTON_ID_MAP[buttonId] ||
+  // Fetch plan description from payload if exists
+  const planDescription =
+    body.payload?.subscription?.entity?.description || // ⬅️ Razorpay sometimes nests it here
+    payment.description ||
     payment.notes?.product ||
     "Deepak Course Purchase";
 
-  // 🟡 Telegram
+  const readablePlanName =
+    PLAN_NAME_MAP[planId] || planDescription || "Subscription (via Razorpay Button)";
+
+  // 🟡 Telegram message
   const tgMessage = escapeMarkdownV2(`
 🏦 *Source:* Razorpay
 💰 *New Payment Captured*
@@ -137,7 +142,7 @@ if (event === "payment.captured" && payment) {
 `);
   await sendTelegramMessage(tgMessage);
 
-  // 💌 Brevo Email
+  // 💌 Brevo Email body
   const emailBody = `
 🏦 Source: Razorpay
 💰 New Payment Captured
@@ -149,13 +154,15 @@ if (event === "payment.captured" && payment) {
 If you purchased a subscription, you'll receive access details shortly.
 If you didn't authorize this payment, please contact us immediately.
 
-Warm regards,  
-Deepak Team  
+Warm regards,
+Deepak Team
 support@realcoachdeepak.com
 `;
   await sendBrevoEmail(email, `Payment Confirmation – ${readablePlanName}`, emailBody);
   console.log(`✅ [Payment Captured] ${payment.id}`);
+  console.log("🧩 Plan Description Check:", planDescription);
 }
+
 
     // 🔁 2️⃣ Subscription Renewal Charged
     if (event === "subscription.charged" && subscription) {
