@@ -110,7 +110,7 @@ export default async function handler(req, res) {
 	  
 	  // 🧪 Test Brevo Email
   await sendBrevoEmail(
-    "youremail@gmail.com",
+    "dayflirts@gmail.com",
     "Test Payment Email ✅",
     `<h2>Payment Captured Successfully</h2>
      <p>Product: ${product}</p>
