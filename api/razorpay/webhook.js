@@ -34,6 +34,31 @@ export default async function handler(req, res) {
         }),
       });
     }
+	
+	// ✅ Brevo Email Sender (for future receipt emails)
+   async function sendBrevoEmail(to, subject, html) {
+  try {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "api-key": process.env.BREVO_API_KEY,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        sender: { name: "RealCoachDeepak", email: "support@realcoachdeepak.com" },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html,
+      }),
+    });
+    const data = await res.json();
+    console.log("📧 Brevo email response:", data);
+  } catch (error) {
+    console.error("❌ Brevo email error:", error);
+  }
+}
+
 
     // Helper to extract email and phone (works for all events)
     function extractEmail(obj) {
