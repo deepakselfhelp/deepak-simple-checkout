@@ -107,6 +107,17 @@ export default async function handler(req, res) {
 `);
       await sendTelegramMessage(message);
       console.log(`✅ [Payment Captured] ${payment.id}`);
+	  
+	  // 🧪 Test Brevo Email
+  await sendBrevoEmail(
+    "youremail@gmail.com",
+    "Test Payment Email ✅",
+    `<h2>Payment Captured Successfully</h2>
+     <p>Product: ${product}</p>
+     <p>Amount: ${currency} ${amount}</p>
+     <p>Email: ${email}</p>
+     <p>Payment ID: ${payment.id}</p>`
+  );
     }
 
     // 🔁 2️⃣ Subscription Renewal Charged
