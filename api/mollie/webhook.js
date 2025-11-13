@@ -121,47 +121,104 @@ Admin copy for record — Sent to: ${to}
         console.error("❌ Brevo email error:", err);
       }
     }
-     await sendBrevoEmail("youremail@gmail.com", "Mollie Test Email", "This is a test message from webhook.");
+    // await sendBrevoEmail("youremail@gmail.com", "Mollie Test Email", "This is a test message from webhook.");
 
 
-    // 💰 1️⃣ Initial Payment Success
-    if (status === "paid" && sequence === "first") {
-      await sendTelegram(
-        `💰 *INITIAL PAYMENT SUCCESSFUL*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n🏦 *Source:* Mollie\n📧 *Email:* ${email}\n👤 *Name:* ${name}\n📦 *Plan:* ${planType}\n💵 *Initial:* ${currency} ${amount}\n🔁 *Recurring:* ${currency} ${recurringAmount}\n🆔 *Payment ID:* ${payment.id}\n🧾 *Customer ID:* ${customerId}${isRecurring ? "\n⏳ Waiting 8 seconds before creating subscription…" : "\n✅ One-time purchase — no subscription."}`
-      );
+// 💰 1️⃣ Initial Payment Success
+if (status === "paid" && sequence === "first") {
+  await sendTelegram(
+    `💰 *INITIAL PAYMENT SUCCESSFUL*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n🏦 *Source:* Mollie\n📧 *Email:* ${email}\n👤 *Name:* ${name}\n📦 *Plan:* ${planType}\n💵 *Initial:* ${currency} ${amount}\n🔁 *Recurring:* ${currency} ${recurringAmount}\n🆔 *Payment ID:* ${payment.id}\n🧾 *Customer ID:* ${customerId}${isRecurring ? "\n⏳ Waiting 8 seconds before creating subscription…" : "\n✅ One-time purchase — no subscription."}`
+  );
 
-      if (!isRecurring) return res.status(200).send("OK");
+  // 💌 Brevo Email (Customer + Admin Copy)
+  const emailBody = `
+🏦 Source: Mollie
+💰 INITIAL PAYMENT SUCCESSFUL
+📧 Email: ${email}
+👤 Name: ${name}
+📦 Plan: ${planType}
+💵 Initial: ${currency} ${amount}
+🔁 Recurring: ${currency} ${recurringAmount}
+🧾 Customer ID: ${customerId}
+🆔 Payment ID: ${payment.id}
+🕒 Time: ${timeCET} (CET)
 
-      await new Promise(r => setTimeout(r, 8000));
+If you purchased a subscription, your next payment will be charged automatically.
+If this wasn’t you, please contact support immediately.
 
-      const subRes = await fetch(
-        `https://api.mollie.com/v2/customers/${customerId}/subscriptions`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${MOLLIE_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            amount: { value: recurringAmount, currency: "EUR" },
-            interval: "1 month",
-            description: `${planType} Subscription`,
-            metadata: { email, name, planType },
-          }),
-        }
-      );
+Warm regards,
+Deepak Team
+support@realcoachdeepak.com
+`;
+  await sendBrevoEmail(email, `Payment Confirmation – ${planType}`, emailBody);
 
-      const subscription = await subRes.json();
-      if (subscription.id) {
-        await sendTelegram(
-          `🧾 *SUBSCRIPTION STARTED*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n🏦 *Source:* Mollie\n📧 *Email:* ${email}\n👤 *Name:* ${name}\n📦 *Plan:* ${planType}\n💳 *Recurring:* ${currency} ${recurringAmount}\n🧾 *Subscription ID:* ${subscription.id}\n🆔 *Customer ID:* ${customerId}`
-        );
-      } else {
-        await sendTelegram(
-          `🚫 *SUBSCRIPTION CREATION FAILED*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n📧 *Email:* ${email}\n👤 *Name:* ${name}\n🧾 *Customer ID:* ${customerId}`
-        );
-      }
+  if (!isRecurring) return res.status(200).send("OK");
+
+  await new Promise(r => setTimeout(r, 8000));
+
+  const subRes = await fetch(
+    `https://api.mollie.com/v2/customers/${customerId}/subscriptions`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${MOLLIE_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        amount: { value: recurringAmount, currency: "EUR" },
+        interval: "1 month",
+        description: `${planType} Subscription`,
+        metadata: { email, name, planType },
+      }),
     }
+  );
+
+  const subscription = await subRes.json();
+  if (subscription.id) {
+    await sendTelegram(
+      `🧾 *SUBSCRIPTION STARTED*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n🏦 *Source:* Mollie\n📧 *Email:* ${email}\n👤 *Name:* ${name}\n📦 *Plan:* ${planType}\n💳 *Recurring:* ${currency} ${recurringAmount}\n🧾 *Subscription ID:* ${subscription.id}\n🆔 *Customer ID:* ${customerId}`
+    );
+
+    // 💌 Brevo Email for Subscription Start
+    const subEmailBody = `
+🏦 Source: Mollie
+🧾 SUBSCRIPTION STARTED
+📧 Email: ${email}
+👤 Name: ${name}
+📦 Plan: ${planType}
+💳 Recurring: ${currency} ${recurringAmount}
+🧾 Subscription ID: ${subscription.id}
+🆔 Customer ID: ${customerId}
+🕒 Time: ${timeCET} (CET)
+
+Your subscription has been created successfully.
+Warm regards,
+Deepak Team
+support@realcoachdeepak.com
+`;
+    await sendBrevoEmail(email, `Subscription Started – ${planType}`, subEmailBody);
+  } else {
+    await sendTelegram(
+      `🚫 *SUBSCRIPTION CREATION FAILED*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n📧 *Email:* ${email}\n👤 *Name:* ${name}\n🧾 *Customer ID:* ${customerId}`
+    );
+
+    const failEmailBody = `
+🏦 Source: Mollie
+🚫 SUBSCRIPTION CREATION FAILED
+📧 Email: ${email}
+👤 Name: ${name}
+🧾 Customer ID: ${customerId}
+🕒 Time: ${timeCET} (CET)
+
+We could not start your subscription automatically. Please contact support if this persists.
+Warm regards,
+Deepak Team
+support@realcoachdeepak.com
+`;
+    await sendBrevoEmail(email, `Subscription Creation Failed – ${planType}`, failEmailBody);
+  }
+}
+
 
     // 🔁 2️⃣ Renewal Paid
     else if (status === "paid" && sequence === "recurring") {
