@@ -240,55 +240,153 @@ support@realcoachdeepak.com
 }
 
 
-    // 🔁 2️⃣ Renewal Paid
-    else if (status === "paid" && sequence === "recurring") {
-      await sendTelegram(
-        `🔁 *RENEWAL CHARGED*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n📧 *Email:* ${email}\n📦 *Plan:* ${planType}\n💵 *Amount:* ${currency} ${amount}\n🧾 *Customer ID:* ${customerId}`
-      );
-    }
+  // 🔁 2️⃣ Renewal Paid
+else if (status === "paid" && sequence === "recurring") {
+  const msg = `🔁 *RENEWAL CHARGED*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n📧 *Email:* ${email}\n📦 *Plan:* ${planType}\n💵 *Amount:* ${currency} ${amount}\n🧾 *Customer ID:* ${customerId}`;
+  await sendTelegram(msg);
 
-    // ⚠️ 3️⃣ Renewal Failed
-    else if (status === "failed" && sequence === "recurring") {
-      await sendTelegram(
-        `⚠️ *RENEWAL FAILED*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n📧 *Email:* ${email}\n📦 *Plan:* ${planType}\n💵 *Amount:* ${currency} ${amount}\n🧾 *Customer ID:* ${customerId}`
-      );
-    }
+  const emailBody = `
+🏦 Source: Mollie
+🔁 SUBSCRIPTION RENEWAL CHARGED
+📧 Email: ${email}
+📦 Plan: ${planType}
+💵 Amount: ${currency} ${amount}
+🧾 Customer ID: ${customerId}
+🕒 Time: ${timeCET} (CET)
 
-    // ❌ 4️⃣ Initial Payment Failed  (handles missing sequenceType)
-    else if (status === "failed" && sequence !== "recurring") {
-      const failType =
-        sequence === "first" ? "INITIAL PAYMENT FAILED" : "PAYMENT FAILED (UNSPECIFIED)";
-      await sendTelegram(
-        `❌ *${failType}*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n📧 *Email:* ${email}\n📦 *Plan:* ${planType}\n💵 *Amount:* ${currency} ${amount}\n🧾 *Customer ID:* ${customerId}`
-      );
-    }
+Your recurring payment has been processed successfully.
+Thank you for staying with us!
 
-    // 🕓 5️⃣ Payment Open (new)
-    else if (status === "open") {
-      await sendTelegram(
-        `🕓 *PAYMENT PENDING / OPEN*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n📧 *Email:* ${email}\n📦 *Plan:* ${planType}\n💵 *Amount:* ${currency} ${amount}\n💬 *Status:* Awaiting user completion`
-      );
-    }
+Warm regards,
+Deepak Team
+support@realcoachdeepak.com
+`;
+  await sendBrevoEmail(email, `Subscription Renewal – ${planType}`, emailBody);
+}
 
-    // ⌛ 6️⃣ Payment Expired (new)
-    else if (status === "expired") {
-      await sendTelegram(
-        `⌛ *PAYMENT EXPIRED*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n📧 *Email:* ${email}\n📦 *Plan:* ${planType}\n💵 *Amount:* ${currency} ${amount}\n💬 *Status:* User didn’t complete checkout`
-      );
-    }
+// ⚠️ 3️⃣ Renewal Failed
+else if (status === "failed" && sequence === "recurring") {
+  const msg = `⚠️ *RENEWAL FAILED*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n📧 *Email:* ${email}\n📦 *Plan:* ${planType}\n💵 *Amount:* ${currency} ${amount}\n🧾 *Customer ID:* ${customerId}`;
+  await sendTelegram(msg);
 
-    // 🚫 7️⃣ Subscription Cancelled
-    else if (body.resource === "subscription" && body.status === "canceled") {
-      await sendTelegram(
-        `🚫 *SUBSCRIPTION CANCELLED*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n📧 *Email:* ${email}\n📦 *Plan:* ${planType}\n🧾 *Customer ID:* ${customerId}`
-      );
-    }
+  const emailBody = `
+🏦 Source: Mollie
+⚠️ SUBSCRIPTION RENEWAL FAILED
+📧 Email: ${email}
+📦 Plan: ${planType}
+💵 Amount: ${currency} ${amount}
+🧾 Customer ID: ${customerId}
+🕒 Time: ${timeCET} (CET)
 
-    // 💤 Fallback
-    else {
-      console.log(`ℹ️ Payment status: ${status}, sequence: ${sequence}`);
-    }
+We could not process your renewal payment.
+Please update your payment method or contact support to avoid interruption.
 
+Warm regards,
+Deepak Team
+support@realcoachdeepak.com
+`;
+  await sendBrevoEmail(email, `Subscription Renewal Failed – ${planType}`, emailBody);
+}
+
+// ❌ 4️⃣ Initial Payment Failed (handles missing sequenceType)
+else if (status === "failed" && sequence !== "recurring") {
+  const failType =
+    sequence === "first" ? "INITIAL PAYMENT FAILED" : "PAYMENT FAILED (UNSPECIFIED)";
+  const msg = `❌ *${failType}*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n📧 *Email:* ${email}\n📦 *Plan:* ${planType}\n💵 *Amount:* ${currency} ${amount}\n🧾 *Customer ID:* ${customerId}`;
+  await sendTelegram(msg);
+
+  const emailBody = `
+🏦 Source: Mollie
+❌ ${failType}
+📧 Email: ${email}
+📦 Plan: ${planType}
+💵 Amount: ${currency} ${amount}
+🧾 Customer ID: ${customerId}
+🕒 Time: ${timeCET} (CET)
+
+Your payment attempt was unsuccessful.
+Please try again or use a different payment method.
+
+Warm regards,
+Deepak Team
+support@realcoachdeepak.com
+`;
+  await sendBrevoEmail(email, `Payment Failed – ${planType}`, emailBody);
+}
+
+// 🕓 5️⃣ Payment Open (new)
+else if (status === "open") {
+  const msg = `🕓 *PAYMENT PENDING / OPEN*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n📧 *Email:* ${email}\n📦 *Plan:* ${planType}\n💵 *Amount:* ${currency} ${amount}\n💬 *Status:* Awaiting user completion`;
+  await sendTelegram(msg);
+
+  const emailBody = `
+🏦 Source: Mollie
+🕓 PAYMENT PENDING / OPEN
+📧 Email: ${email}
+📦 Plan: ${planType}
+💵 Amount: ${currency} ${amount}
+🕒 Time: ${timeCET} (CET)
+
+Your payment is still in progress.
+Please complete the checkout process to activate your subscription.
+
+Warm regards,
+Deepak Team
+support@realcoachdeepak.com
+`;
+  await sendBrevoEmail(email, `Payment Pending – ${planType}`, emailBody);
+}
+
+// ⌛ 6️⃣ Payment Expired (new)
+else if (status === "expired") {
+  const msg = `⌛ *PAYMENT EXPIRED*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n📧 *Email:* ${email}\n📦 *Plan:* ${planType}\n💵 *Amount:* ${currency} ${amount}\n💬 *Status:* User didn’t complete checkout`;
+  await sendTelegram(msg);
+
+  const emailBody = `
+🏦 Source: Mollie
+⌛ PAYMENT EXPIRED
+📧 Email: ${email}
+📦 Plan: ${planType}
+💵 Amount: ${currency} ${amount}
+🕒 Time: ${timeCET} (CET)
+
+Your checkout session has expired.
+If you still wish to join, please restart your purchase.
+
+Warm regards,
+Deepak Team
+support@realcoachdeepak.com
+`;
+  await sendBrevoEmail(email, `Payment Expired – ${planType}`, emailBody);
+}
+
+// 🚫 7️⃣ Subscription Cancelled
+else if (body.resource === "subscription" && body.status === "canceled") {
+  const msg = `🚫 *SUBSCRIPTION CANCELLED*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n📧 *Email:* ${email}\n📦 *Plan:* ${planType}\n🧾 *Customer ID:* ${customerId}`;
+  await sendTelegram(msg);
+
+  const emailBody = `
+🏦 Source: Mollie
+🚫 SUBSCRIPTION CANCELLED
+📧 Email: ${email}
+📦 Plan: ${planType}
+🧾 Customer ID: ${customerId}
+🕒 Time: ${timeCET} (CET)
+
+Your subscription has been cancelled successfully.
+You can re-subscribe anytime through our website.
+
+Warm regards,
+Deepak Team
+support@realcoachdeepak.com
+`;
+  await sendBrevoEmail(email, `Subscription Cancelled – ${planType}`, emailBody);
+}
+
+// 💤 Fallback
+else {
+  console.log(`ℹ️ Payment status: ${status}, sequence: ${sequence}`);
+}
     res.status(200).send("OK");
   } catch (err) {
     console.error("❌ Mollie Webhook Error:", err);
