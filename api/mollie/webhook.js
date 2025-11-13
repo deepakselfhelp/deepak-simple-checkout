@@ -79,6 +79,50 @@ export default async function handler(req, res) {
         console.error("⚠️ Telegram send failed:", err);
       }
     }
+	
+	    // ✅ Brevo sender (plain text with admin copy)
+    async function sendBrevoEmail(to, subject, text) {
+      try {
+        const apiKey = process.env.BREVO_API_KEY;
+        const senderEmail = "support@realcoachdeepak.com";
+        const adminEmail = "deepakdating101@gmail.com"; // 👈 Admin copy address
+
+        // 1️⃣ Recipients list (avoid loops)
+        const recipients = [{ email: to }];
+        if (to !== adminEmail) recipients.push({ email: adminEmail });
+
+        // 2️⃣ Admin footer for traceability
+        const htmlContent = `
+${text.replace(/\n/g, "<br>")}
+<hr style="margin-top:20px;border:0;border-top:1px solid #ccc;">
+<p style="font-size:13px;color:#555;">
+Admin copy for record — Sent to: ${to}
+</p>`;
+
+        // 3️⃣ Send to Brevo
+        const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "api-key": apiKey,
+          },
+          body: JSON.stringify({
+            sender: { name: "Deepak Team", email: senderEmail },
+            to: recipients, // customer + admin
+            subject,
+            htmlContent,
+          }),
+        });
+
+        // 4️⃣ Log result
+        const data = await res.json();
+        console.log("📧 Brevo email response:", data);
+      } catch (err) {
+        console.error("❌ Brevo email error:", err);
+      }
+    }
+     await sendBrevoEmail("youremail@gmail.com", "Mollie Test Email", "This is a test message from webhook.");
+
 
     // 💰 1️⃣ Initial Payment Success
     if (status === "paid" && sequence === "first") {
