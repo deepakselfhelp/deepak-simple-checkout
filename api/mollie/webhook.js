@@ -127,10 +127,8 @@ Admin copy for record — Sent to: ${to}
 // 💰 1️⃣ Initial Payment Success
 if (status === "paid" && sequence === "first") {
 	  // 🧠 Prevent duplicate processing
-  if (processedPayments.has(payment.id)) {
-    console.log(`⚠️ Duplicate Mollie initial payment ignored for ${payment.id}`);
-    return res.status(200).send("Duplicate ignored");
-  }
+  if (!processedPayments.has(payment.id)) {
+   
   processedPayments.add(payment.id);
 	
 	
@@ -159,6 +157,10 @@ Deepak Team
 support@realcoachdeepak.com
 `;
   await sendBrevoEmail(email, `Payment Confirmation – ${planType}`, emailBody);
+  } else {
+  console.log(`⚠️ Duplicate Mollie payment ignored for ${payment.id}`);
+  return res.status(200).send("Duplicate ignored");
+}
 
   if (!isRecurring) return res.status(200).send("OK");
 
