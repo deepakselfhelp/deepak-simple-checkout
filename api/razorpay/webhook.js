@@ -1,4 +1,4 @@
-// ✅ Final Razorpay Webhook (shows Email + Phone in all Telegram messages)
+// ✅ Razorpay Webhook + Brevo Email (Inbox-Safe Plain Text)
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -13,12 +13,12 @@ export default async function handler(req, res) {
 
     console.log(`📬 Received Razorpay Event: ${event}`);
 
-    // Escape MarkdownV2 special characters
+    // Escape MarkdownV2 special characters (Telegram)
     function escapeMarkdownV2(text) {
-      return text.replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
+      return text.replace(/([_*\[\]()~`>#+\\-=|{}.!\\])/g, "\\$1");
     }
 
-    // Send Telegram message
+    // ✅ Telegram message sender
     async function sendTelegramMessage(text) {
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
       const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -34,33 +34,35 @@ export default async function handler(req, res) {
         }),
       });
     }
-	
-	// ✅ Brevo Email Sender (for future receipt emails)
-   async function sendBrevoEmail(to, subject, html) {
-  try {
-    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        "api-key": process.env.BREVO_API_KEY,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        sender: { name: "RealCoachDeepak", email: "support@realcoachdeepak.com" },
-        to: [{ email: to }],
-        subject,
-        htmlContent: html,
-      }),
-    });
-    const data = await res.json();
-    console.log("📧 Brevo email response:", data);
-  } catch (error) {
-    console.error("❌ Brevo email error:", error);
-  }
-}
 
+    // ✅ Brevo email sender (plain text)
+    async function sendBrevoEmail(to, subject, text) {
+      try {
+        const apiKey = process.env.BREVO_API_KEY;
+        const senderEmail = "support@realcoachdeepak.com";
 
-    // Helper to extract email and phone (works for all events)
+        const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "api-key": apiKey,
+          },
+          body: JSON.stringify({
+            sender: { name: "Deepak Team", email: senderEmail },
+            to: [{ email: to }],
+            subject,
+            htmlContent: text.replace(/\n/g, "<br>"),
+          }),
+        });
+
+        const data = await res.json();
+        console.log("📧 Brevo email response:", data);
+      } catch (err) {
+        console.error("❌ Brevo email error:", err);
+      }
+    }
+
+    // Helpers to extract customer info
     function extractEmail(obj) {
       return (
         obj?.email ||
@@ -89,35 +91,42 @@ export default async function handler(req, res) {
       const amount = (payment.amount / 100).toFixed(2);
       const currency = payment.currency || "INR";
       const email = extractEmail(payment);
-      const phone = extractPhone(payment);
+      const name = payment.notes?.name || "Customer";
       const product =
         payment.notes?.product ||
         payment.notes?.plan_name ||
         payment.notes?.subscription_name ||
         "Subscription (via Razorpay Button)";
 
-      const message = escapeMarkdownV2(`
+      // Telegram
+      const tgMessage = escapeMarkdownV2(`
 🏦 *Source:* Razorpay
 💰 *New Payment Captured*
 📦 *Product:* ${product}
 📧 *Email:* ${email}
-📱 *Phone:* ${phone}
 💵 *Amount:* ${currency} ${amount}
 🆔 *Payment ID:* ${payment.id}
 `);
-      await sendTelegramMessage(message);
+      await sendTelegramMessage(tgMessage);
+
+      // Brevo Email
+      const emailBody = `
+Hello ${name},
+
+Your payment for ${product} has been successfully received.
+
+Amount: ${currency} ${amount}
+Payment ID: ${payment.id}
+
+If you purchased a subscription, you’ll receive access details shortly.
+If you didn’t authorize this payment, please contact us immediately.
+
+Warm regards,
+Deepak Team  
+support@realcoachdeepak.com
+`;
+      await sendBrevoEmail(email, "Payment Confirmation – RealCoachDeepak", emailBody);
       console.log(`✅ [Payment Captured] ${payment.id}`);
-	  
-	  // 🧪 Test Brevo Email
-  await sendBrevoEmail(
-    "dayflirts@gmail.com",
-    "Test Payment Email ✅",
-    `<h2>Payment Captured Successfully</h2>
-     <p>Product: ${product}</p>
-     <p>Amount: ${currency} ${amount}</p>
-     <p>Email: ${email}</p>
-     <p>Payment ID: ${payment.id}</p>`
-  );
     }
 
     // 🔁 2️⃣ Subscription Renewal Charged
