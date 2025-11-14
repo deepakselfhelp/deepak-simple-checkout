@@ -28,6 +28,7 @@ export default async function handler(req, res) {
     res.status(200).send("OK");
 
     // Continue processing asynchronously
+    console.log("✅ Razorpay webhook acknowledged — processing async now...");
     setTimeout(() => handleRazorpayEvent(body), 0);
 
     // Stop execution (we already responded to Razorpay)
@@ -41,6 +42,7 @@ export default async function handler(req, res) {
 // ✅ MAIN EVENT HANDLER LOGIC
 async function handleRazorpayEvent(body) {
   try {
+    console.log("🚀 Async Razorpay event processor started...");
     const event = body.event;
     const payment = body.payload?.payment?.entity;
     const subscription = body.payload?.subscription?.entity;
