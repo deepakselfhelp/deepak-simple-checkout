@@ -218,10 +218,13 @@ support@realcoachdeepak.com
 `;
     await sendBrevoEmail(email, `Subscription Started – ${planType}`, subEmailBody);
   } else if (!subscription.id && subscription.status !== "active") {
-    await sendTelegram(
-      `🚫 *SUBSCRIPTION CREATION FAILED*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n📧 *Email:* ${email}\n👤 *Name:* ${name}\n🧾 *Customer ID:* ${customerId}`
-    );
+  const failTgMessage = `🚫 *SUBSCRIPTION CREATION FAILED*\n━━━━━━━━━━━━━━━\n🕒 *Time:* ${timeCET} (CET)\n📧 *Email:* ${email}\n👤 *Name:* ${name}\n🧾 *Customer ID:* ${customerId}`;
 
+  try {
+    // Try sending Telegram first
+    await sendTelegram(failTgMessage);
+
+    // Only send email if Telegram succeeds (no exception)
     const failEmailBody = `
 🏦 Source: Mollie
 🚫 SUBSCRIPTION CREATION FAILED
@@ -236,8 +239,11 @@ Deepak Team
 support@realcoachdeepak.com
 `;
     await sendBrevoEmail(email, `Subscription Creation Failed – ${planType}`, failEmailBody);
+  } catch (err) {
+    console.log("⚠️ Telegram failed or duplicate callback — skipped Brevo email for subscription creation fail");
   }
 }
+
 
 
   // 🔁 2️⃣ Renewal Paid
