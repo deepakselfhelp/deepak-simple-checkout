@@ -14,11 +14,12 @@ export default async function handler(req, res) {
 	
    // 🚧 Early duplicate protection (resource + id normalized)
 const resourceType = (body.resource || "payment").toLowerCase();
-const cacheKey = `${resourceType}-${paymentId}`;
 
+const altId = body.resource === "subscription" ? body.subscriptionId || paymentId : paymentId;
+ const cacheKey = `${resourceType}-${paymentId}`;
 // Mollie can send the same event twice with slightly different shapes,
 // so normalize the key again for payment/subscription overlap:
-const altKey = paymentId;
+const altKey = `payment-${altId}`;
 
 if (processedPayments.has(cacheKey) || processedPayments.has(altKey)) {
   console.log(`⚠️ Duplicate Mollie webhook ignored for ${cacheKey}`);
