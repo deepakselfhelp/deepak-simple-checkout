@@ -1,30 +1,43 @@
-// ✅ /api/mollie/cancel-subscription.js (Password Protected)
+// /api/mollie/cancel-subscription.js
 export default async function handler(req, res) {
   try {
     if (req.method !== "POST") {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    // 🔧 ALWAYS define environment variables at the top
     const MOLLIE_KEY = process.env.MOLLIE_SECRET_KEY;
     const ADMIN_PASSWORD = process.env.ADMIN_CANCEL_PASSWORD;
 
-    // Now extract request body
-    const { customerId, subscriptionId, password } = req.body;
+    // ✔️ MATCHES your HTML form
+    const { email, subscriptionId, adminPassword } = req.body;
 
-    // 🔒 Password validation
-    if (!password || password !== ADMIN_PASSWORD) {
-      return res.status(401).json({ success: false, error: "Invalid admin password" });
+    if (!adminPassword || adminPassword !== ADMIN_PASSWORD) {
+      return res.status(401).json({ error: "Invalid admin password" });
     }
 
-    if (!customerId || !subscriptionId) {
-      return res.status(400).json({
-        success: false,
-        error: "Missing customerId or subscriptionId",
-      });
+    if (!subscriptionId) {
+      return res.status(400).json({ error: "Missing subscriptionId" });
     }
 
-    // 🔥 Cancel subscription via Mollie
+    // 1️⃣ Fetch subscription to get customerId
+    const subRes = await fetch(
+      `https://api.mollie.com/v2/subscriptions/${subscriptionId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${MOLLIE_KEY}`,
+        },
+      }
+    );
+
+    const sub = await subRes.json();
+
+    if (!sub.id) {
+      return res.status(404).json({ error: "Subscription not found" });
+    }
+
+    const customerId = sub.customerId;
+
+    // 2️⃣ Cancel subscription
     const cancelRes = await fetch(
       `https://api.mollie.com/v2/customers/${customerId}/subscriptions/${subscriptionId}`,
       {
@@ -35,6 +48,7 @@ export default async function handler(req, res) {
       }
     );
 
+    // ✔️ If cancellation accepted, we return SUCCESS
     if (cancelRes.status === 204) {
       return res.status(200).json({
         success: true,
@@ -42,22 +56,28 @@ export default async function handler(req, res) {
       });
     }
 
-    // Get error details
+    // ✔️ If already cancelled, we still return SUCCESS
+    if (cancelRes.status === 422) {
+      return res.status(200).json({
+        success: true,
+        message: "Subscription was already cancelled earlier",
+        alreadyCancelled: true,
+      });
+    }
+
+    // Fallback
     let errorDetails = {};
     try {
       errorDetails = await cancelRes.json();
     } catch (_) {}
 
-    console.log("❌ Mollie Cancel Error:", errorDetails);
-
     return res.status(400).json({
-      success: false,
-      error: "Failed to cancel subscription",
+      error: "Cancellation failed",
       details: errorDetails,
     });
 
   } catch (err) {
     console.error("❌ Cancel Subscription API Error:", err);
-    return res.status(500).json({ error: "Internal Server Error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
