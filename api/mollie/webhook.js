@@ -169,24 +169,30 @@ support@realcoachdeepak.com
   if (!isRecurring) return res.status(200).send("OK");
 
   await new Promise(r => setTimeout(r, 8000));
+ // 📅 Calculate subscription start date (30 days from today)
+ const startDateObj = new Date();
+ startDateObj.setMonth(startDateObj.getMonth() + 1);
+ const subscriptionStartDate = startDateObj.toISOString().split("T")[0];
 
-  // 🧾 Create subscription after initial payment
-  const subRes = await fetch(
-    `https://api.mollie.com/v2/customers/${customerId}/subscriptions`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${MOLLIE_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        amount: { value: recurringAmount, currency: "EUR" },
-        interval: "1 month",
-        description: `${planType} Subscription`,
-        metadata: { email, name, planType },
-      }),
-    }
-  );
+ // 🧾 Create subscription (first billing AFTER 30 days)
+const subRes = await fetch(
+  `https://api.mollie.com/v2/customers/${customerId}/subscriptions`,
+  {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${MOLLIE_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      amount: { value: recurringAmount, currency: "EUR" },
+      interval: "1 month",
+      description: `${planType} Subscription`,
+      startDate: subscriptionStartDate,  // <-- ⭐ 30-day delay
+      webhookUrl: "https://realcoachdeepak.com/api/mollie/webhook",
+      metadata: { email, name, planType },
+    }),
+  }
+);
 
   const subscription = await subRes.json();
   if (subscription.id) {
