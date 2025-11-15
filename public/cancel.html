@@ -9,9 +9,24 @@
     body {
       background:#0a0a0a;
       color:white;
-      font-family: Poppins, sans-serif;
+      font-family:'Poppins', sans-serif;
       text-align:center;
       padding:40px 20px;
+    }
+    input, button {
+      padding:12px;
+      width:300px;
+      border:none;
+      border-radius:6px;
+      margin:10px auto;
+      font-size:16px;
+      display:block;
+    }
+    button {
+      background:#f5b800;
+      color:black;
+      font-weight:600;
+      cursor:pointer;
     }
     .box {
       background:#111;
@@ -21,71 +36,50 @@
       max-width:420px;
       margin:0 auto;
     }
-    input {
-      padding:12px;
-      width:300px;
-      border:none;
-      border-radius:6px;
-      margin:10px auto;
-      display:block;
-      font-size:16px;
-    }
-    button {
-      background:#f5b800;
-      color:black;
-      padding:12px 25px;
-      border:none;
-      border-radius:6px;
-      cursor:pointer;
-      font-weight:600;
-      margin-top:10px;
-    }
-    .success { color:#00ff99; font-size:17px; margin-top:15px; }
-    .error { color:#ff4444; font-size:17px; margin-top:15px; }
+    .success { color:#00ff99; margin-top:20px; }
+    .error { color:#ff4444; margin-top:20px; }
   </style>
-
 </head>
+
 <body>
 
-<h1>Cancel Subscription</h1>
+  <h1>Cancel Subscription</h1>
 
-<div class="box">
-  <p>Enter the Customer ID + Subscription ID to cancel.</p>
+  <div class="box">
 
-  <input id="customerId" type="text" placeholder="Customer ID (cst_...)" />
-  <input id="subscriptionId" type="text" placeholder="Subscription ID (sub_...)" />
-  <input id="adminPassword" type="password" placeholder="Admin Password" />
+    <input id="customerId" type="text" placeholder="Customer ID (cst_xxx)" />
+    <input id="subscriptionId" type="text" placeholder="Subscription ID (sub_xxx)" />
+    <input id="password" type="password" placeholder="Admin Password" />
 
-  <button id="cancelBtn">Cancel Subscription</button>
+    <button id="cancelBtn">Cancel Subscription</button>
 
-  <div id="response"></div>
-</div>
+    <div id="response"></div>
+  </div>
 
 <script>
 document.getElementById("cancelBtn").addEventListener("click", async () => {
   const customerId = document.getElementById("customerId").value.trim();
   const subscriptionId = document.getElementById("subscriptionId").value.trim();
-  const adminPassword = document.getElementById("adminPassword").value.trim();
+  const password = document.getElementById("password").value.trim();
   const responseBox = document.getElementById("response");
 
-  if (!customerId || !subscriptionId || !adminPassword) {
-    responseBox.innerHTML = "<p class='error'>⚠️ All fields required.</p>";
+  if (!customerId || !subscriptionId || !password) {
+    responseBox.innerHTML = "<p class='error'>⚠️ All fields are required.</p>";
     return;
   }
 
   const res = await fetch("/api/mollie/cancel-subscription", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ customerId, subscriptionId, password: adminPassword })
+    body: JSON.stringify({ customerId, subscriptionId, password })
   });
 
   const data = await res.json();
 
   if (res.status === 200) {
-    responseBox.innerHTML =
-      "<p class='success'>✅ Cancellation requested. It may take 30–60sec to update in Mollie.</p>";
+    responseBox.innerHTML = `<p class="success">✅ ${data.message}</p>`;
   } else {
-    responseBox.innerHTML = `<p class="error">❌ ${data.error}</p>`;
+    responseBox.innerHTML = `<p class="error">❌ ${data.error || 'Cancel failed'}</p>`;
   }
 });
 </script>
