@@ -122,7 +122,7 @@
 
       <input id="name" type="text" placeholder="Full Name" />
       <input id="email" type="email" placeholder="Email (required)" required />
-      <button id="subscribeBtn">Start €9 Subscription</button>
+      <button id="subscribeBtn">Start €29 Subscription</button>
 
       <p style="color:#aaa; font-size:13px; margin-top:12px;">Secure checkout powered by Mollie.</p>
     </div>
@@ -212,8 +212,8 @@ subscribeBtn.addEventListener("click", async () => {
       body: JSON.stringify({
   name,
   email,
-  initialAmount: "9.00",
-  recurringAmount: "9.00",
+  initialAmount: "29.00",
+  recurringAmount: "29.00",
   planType: "DID Main Monthly"
 })
     });
